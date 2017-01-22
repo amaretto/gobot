@@ -1,11 +1,10 @@
 package main
 
 import (
-    
+	"fmt"
 )
 
 func main() {
-    //TODO implement cron task
-
-
+    fmt.Println("hoge")
+    
 }
