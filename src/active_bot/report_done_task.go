@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/nlopes/slack"
 )
 
 type List struct {
@@ -37,16 +39,9 @@ func (a ByTitle) Less(i, j int) bool { return a[i].Title < a[j].Title }
 
 func main() {
 
-	var option = "day"
-	// Get flags
-	if len(os.Args) > 1 {
-		option = os.Args[1]
-	}
-
-	// Get information for connecting Wunderlist from env
+	// Get information for connecting Wunderlist
 	accessToken := os.Getenv("WUND_ACTOKEN")
 	clientID := os.Getenv("WUND_CLIENT")
-
 	wunderlistURL := "https://a.wunderlist.com/api/v1/"
 
 	// get all lists from Wunderlist
@@ -109,35 +104,41 @@ func main() {
 
 	//sort by title=
 	sort.Sort(ByTitle(tasks))
-
-	//for time calculation
-	layout := "2006-01-02T15:04:05.000Z"
+	//for date
 	now := time.Now()
+	today := now.Format("2006-01-02")
+	message := "Today's done task...\n"
+	count := 0
 
-	if option == "week" {
-		// fot week
-		weekAgo := now.AddDate(0, 0, -7)
-		var taskDate time.Time
-
-		fmt.Printf("[Done tasks on %s - %s]\n", weekAgo, now)
-		for _, task := range tasks {
-			taskDate, err = time.Parse(layout, task.CompleteAt)
-			if err != nil {
-				fmt.Print(err)
-			}
-			if taskDate.After(weekAgo) {
-				fmt.Println("\t", task.Title)
-			}
-		}
-	} else {
-		//for date
-		today := now.Format("2006-01-02")
-		fmt.Println("[Done tasks on today]")
-
-		for _, task := range tasks {
-			if strings.HasPrefix(task.CompleteAt, today) {
-				fmt.Println("\t", task.Title)
-			}
+	for _, task := range tasks {
+		if strings.HasPrefix(task.CompleteAt, today) {
+			count++
+			fmt.Println("\t", task.Title)
+			message += task.Title + "\n"
 		}
 	}
+
+	if count == 0 {
+		message += "... nothing!\nAre you seriously...?"
+	} else if count < 5 {
+		message += "Done tasks are few... Do it properly"
+	} else {
+		message += "Good job!! You done a lot of tasks!!"
+	}
+
+	sendMessage(message)
+}
+
+func sendMessage(message string) {
+	api := slack.New(os.Getenv("SLACK_TOKEN"))
+	username := os.Getenv("SLACK_USERNAME")
+
+	message = username + " " + message
+	params := slack.PostMessageParameters{}
+	attachment := slack.Attachment{
+		Text: message,
+	}
+	params.Attachments = []slack.Attachment{attachment}
+	params.AsUser = true
+	api.PostMessage("#bot_project", "", params)
 }
