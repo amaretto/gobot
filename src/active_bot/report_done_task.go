@@ -11,27 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nlopes/slack"
+	"../slackutil"
+	"../wunderlistutil"
 )
 
-type List struct {
-	ID       int    `json:"id"`
-	Title    string `json:"title"`
-	CreateAt string `json:"create_at"`
-	ListType string `json:"list_type"`
-	Revision int    `json:"revision"`
-}
-
-type Task struct {
-	ID         int    `json:"id"`
-	Title      string `json:"title"`
-	CreatedAt  string `json:"created_at"`
-	DueDate    string `json:"due_date"`
-	CompleteAt string `json:"completed_at"`
-}
-
 //for title Sort
-type ByTitle []Task
+type ByTitle []wunderlistutil.Task
 
 func (a ByTitle) Len() int           { return len(a) }
 func (a ByTitle) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
@@ -63,7 +48,7 @@ func main() {
 	byteArray, _ := ioutil.ReadAll(resp.Body)
 
 	//parse JSON
-	var lists []List
+	var lists []wunderlistutil.List
 	err = json.Unmarshal(byteArray, &lists)
 	if err != nil {
 		fmt.Println("Unmarshal Problem? : ", err)
@@ -96,7 +81,7 @@ func main() {
 	taskByteArray, _ := ioutil.ReadAll(taskResp.Body)
 
 	//parse task list JSON
-	var tasks []Task
+	var tasks []wunderlistutil.Task
 	err = json.Unmarshal(taskByteArray, &tasks)
 	if err != nil {
 		fmt.Println("err! : ", err)
@@ -126,19 +111,5 @@ func main() {
 		message += "Good job!! You done a lot of tasks!!"
 	}
 
-	sendMessage(message)
-}
-
-func sendMessage(message string) {
-	api := slack.New(os.Getenv("SLACK_TOKEN"))
-	username := os.Getenv("SLACK_USERNAME")
-
-	message = username + " " + message
-	params := slack.PostMessageParameters{}
-	attachment := slack.Attachment{
-		Text: message,
-	}
-	params.Attachments = []slack.Attachment{attachment}
-	params.AsUser = true
-	api.PostMessage("#bot_project", "", params)
+	slackutil.SendMessage(message)
 }
