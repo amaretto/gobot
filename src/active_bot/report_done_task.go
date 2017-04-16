@@ -2,11 +2,12 @@ package main
 
 import (
 	"os"
-	"slackutil"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"../slackutil"
 
 	"../wunderlistutil"
 )
@@ -20,12 +21,11 @@ func (a ByTitle) Less(i, j int) bool { return a[i].Title < a[j].Title }
 
 func main() {
 
-	var param wunderlistutil.Param
-	param.AccessToken = os.Getenv("WUND_ACTOKEN")
-	param.ClientID = os.Getenv("WUND_CLIENT")
+	param := wunderlistutil.Param{AccessToken: os.Getenv("WUND_ACTOKEN"),
+		ClientID: os.Getenv("WUND_CLIENT")}
 
-	var listLists []wunderlistutil.List
-	listLists = wunderlistutil.GetLists(param)
+	var lists []wunderlistutil.List
+	lists = wunderlistutil.GetLists(param)
 
 	doneFlag := true
 
@@ -35,13 +35,13 @@ func main() {
 	message := "Today's done task...\n"
 	count := 0
 
-	for _, list := range listLists {
-		var taskLists []wunderlistutil.Task
-		taskLists = wunderlistutil.GetTasks(param, strconv.Itoa(list.ID), doneFlag)
-		sort.Sort(ByTitle(taskLists))
+	for _, list := range lists {
+		var taskList []wunderlistutil.Task
+		taskList = wunderlistutil.GetTasks(param, strconv.Itoa(list.ID), doneFlag)
+		sort.Sort(ByTitle(taskList))
 		applicableCount := 0
 		taskString := ""
-		for _, task := range taskLists {
+		for _, task := range taskList {
 			if strings.HasPrefix(task.CompleteAt, today) {
 				count++
 				applicableCount++
