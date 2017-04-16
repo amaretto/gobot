@@ -1,10 +1,7 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"sort"
 	"strconv"
@@ -30,69 +27,18 @@ func main() {
 	param.AccessToken = os.Getenv("WUND_ACTOKEN")
 	param.ClientID = os.Getenv("WUND_CLIENT")
 
-	// Get information for connecting Wunderlist
-	accessToken := os.Getenv("WUND_ACTOKEN")
-	clientID := os.Getenv("WUND_CLIENT")
-	wunderlistURL := "https://a.wunderlist.com/api/v1/"
-	//
-	//	// get all lists from Wunderlist
-	//	endpoint := "lists"
-	//
-	//	// create http request
-	//	req, _ := http.NewRequest("GET", wunderlistURL+endpoint, nil)
-	//	req.Header.Set("X-Access-Token", accessToken)
-	//	req.Header.Set("X-Client-ID", clientID)
-	//
-	//	// send http GET request to Wunderlist
-	client := new(http.Client)
-	//	resp, err := client.Do(req)
-	//	if err != nil {
-	//		fmt.Println(err)
-	//	}
-	//	defer resp.Body.Close()
-	//
-	//	byteArray, _ := ioutil.ReadAll(resp.Body)
-	//
-	//	//parse JSON
 	var lists []wunderlistutil.List
-	//	err = json.Unmarshal(byteArray, &lists)
-	//	if err != nil {
-	//		fmt.Println("Unmarshal Problem? : ", err)
-	//	}
 	lists = wunderlistutil.GetLists(param)
 
-	taskEndpoint := "tasks"
-	listParam := "?list_id="
 	var listID string
-	doneFlagParam := "&completed="
-	doneFlag := "false"
-
 	for _, list := range lists {
 		if list.Title == "job" {
 			listID = strconv.Itoa(list.ID)
 		}
 	}
 
-	// create http request
-	taskReq, _ := http.NewRequest("GET", wunderlistURL+
-		taskEndpoint+
-		listParam+
-		listID+
-		doneFlagParam+doneFlag, nil)
-	taskReq.Header.Set("X-Access-Token", accessToken)
-	taskReq.Header.Set("X-Client-ID", clientID)
-	//get task list from Wunderlist
-	taskResp, err := client.Do(taskReq)
-	defer taskResp.Body.Close()
-
-	taskByteArray, _ := ioutil.ReadAll(taskResp.Body)
-
-	//parse task list JSON
 	var tasks []wunderlistutil.Task
-	err = json.Unmarshal(taskByteArray, &tasks)
-	if err != nil {
-		fmt.Println("err! : ", err)
-	}
+	tasks = wunderlistutil.GetTasks(param, listID, false)
 
 	//sort by title=
 	sort.Sort(ByTitle(tasks))
@@ -102,6 +48,9 @@ func main() {
 	layout := "2006-01-02"
 	todayString := now.Format(layout)
 	today, err := time.Parse(layout, todayString)
+	if err != nil {
+		fmt.Println("err! : ", err)
+	}
 	headMessage := "Today's your task...\n"
 	newTaskMessage := "\t[New Task]\n"
 	delayedTaskMessage := "\t[Delayed Task]\n"

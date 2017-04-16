@@ -1,17 +1,13 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
+	"slackutil"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"../slackutil"
 	"../wunderlistutil"
 )
 
@@ -24,82 +20,38 @@ func (a ByTitle) Less(i, j int) bool { return a[i].Title < a[j].Title }
 
 func main() {
 
-	// Get information for connecting Wunderlist
-	accessToken := os.Getenv("WUND_ACTOKEN")
-	clientID := os.Getenv("WUND_CLIENT")
-	wunderlistURL := "https://a.wunderlist.com/api/v1/"
+	var param wunderlistutil.Param
+	param.AccessToken = os.Getenv("WUND_ACTOKEN")
+	param.ClientID = os.Getenv("WUND_CLIENT")
 
-	// get all lists from Wunderlist
-	endpoint := "lists"
+	var listLists []wunderlistutil.List
+	listLists = wunderlistutil.GetLists(param)
 
-	// create http request
-	req, _ := http.NewRequest("GET", wunderlistURL+endpoint, nil)
-	req.Header.Set("X-Access-Token", accessToken)
-	req.Header.Set("X-Client-ID", clientID)
+	doneFlag := true
 
-	// send http GET request to Wunderlist
-	client := new(http.Client)
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer resp.Body.Close()
-
-	byteArray, _ := ioutil.ReadAll(resp.Body)
-
-	//parse JSON
-	var lists []wunderlistutil.List
-	err = json.Unmarshal(byteArray, &lists)
-	if err != nil {
-		fmt.Println("Unmarshal Problem? : ", err)
-	}
-
-	taskEndpoint := "tasks"
-	listParam := "?list_id="
-	var listID string
-	doneFlagParam := "&completed="
-	doneFlag := "true"
-
-	for _, list := range lists {
-		if list.Title == "job" {
-			listID = strconv.Itoa(list.ID)
-		}
-	}
-
-	// create http request
-	taskReq, _ := http.NewRequest("GET", wunderlistURL+
-		taskEndpoint+
-		listParam+
-		listID+
-		doneFlagParam+doneFlag, nil)
-	taskReq.Header.Set("X-Access-Token", accessToken)
-	taskReq.Header.Set("X-Client-ID", clientID)
-	//get task list from Wunderlist
-	taskResp, err := client.Do(taskReq)
-	defer taskResp.Body.Close()
-
-	taskByteArray, _ := ioutil.ReadAll(taskResp.Body)
-
-	//parse task list JSON
-	var tasks []wunderlistutil.Task
-	err = json.Unmarshal(taskByteArray, &tasks)
-	if err != nil {
-		fmt.Println("err! : ", err)
-	}
-
-	//sort by title=
-	sort.Sort(ByTitle(tasks))
 	//for date
 	now := time.Now()
 	today := now.Format("2006-01-02")
 	message := "Today's done task...\n"
 	count := 0
 
-	for _, task := range tasks {
-		if strings.HasPrefix(task.CompleteAt, today) {
-			count++
-			fmt.Println("\t", task.Title)
-			message += task.Title + "\n"
+	for _, list := range listLists {
+		var taskLists []wunderlistutil.Task
+		taskLists = wunderlistutil.GetTasks(param, strconv.Itoa(list.ID), doneFlag)
+		sort.Sort(ByTitle(taskLists))
+		applicableCount := 0
+		taskString := ""
+		for _, task := range taskLists {
+			if strings.HasPrefix(task.CompleteAt, today) {
+				count++
+				applicableCount++
+				taskString += "\t" + task.Title + "\n"
+			}
+		}
+		if applicableCount == 0 {
+			continue
+		} else {
+			message += "\t[" + list.Title + "]\n" + taskString
 		}
 	}
 

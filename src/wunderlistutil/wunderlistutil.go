@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 )
 
 const WUNDERLIST_URL = "https://a.wunderlist.com/api/v1/"
 
 const LIST_ENDPOINT = "lists"
-const TASK_ENDPOINT = "task"
+const TASK_ENDPOINT = "tasks"
+
+const LIST_PARAM = "?list_id="
+const DONE_FLAG_PARAM = "&completed="
 
 type Param struct {
 	AccessToken string
@@ -36,7 +40,8 @@ type Task struct {
 func GetLists(param Param) []List {
 
 	// create http request
-	req, _ := http.NewRequest("GET", WUNDERLIST_URL+LIST_ENDPOINT, nil)
+	requestString := WUNDERLIST_URL + LIST_ENDPOINT
+	req, _ := http.NewRequest("GET", requestString, nil)
 	req.Header.Set("X-Access-Token", param.AccessToken)
 	req.Header.Set("X-Client-ID", param.ClientID)
 
@@ -57,4 +62,33 @@ func GetLists(param Param) []List {
 	}
 
 	return lists
+}
+
+func GetTasks(param Param, listID string, doneFlag bool) []Task {
+
+	// create http request
+	requestString := WUNDERLIST_URL + TASK_ENDPOINT +
+		LIST_PARAM + listID +
+		DONE_FLAG_PARAM + strconv.FormatBool(doneFlag)
+	req, _ := http.NewRequest("GET", requestString, nil)
+	req.Header.Set("X-Access-Token", param.AccessToken)
+	req.Header.Set("X-Client-ID", param.ClientID)
+
+	// send http GET request to Wunderlist
+	client := new(http.Client)
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer resp.Body.Close()
+	byteArray, _ := ioutil.ReadAll(resp.Body)
+
+	//parse JSON
+	var tasks []Task
+	err = json.Unmarshal(byteArray, &tasks)
+	if err != nil {
+		fmt.Println("unmarshal problem occured : ", err)
+	}
+
+	return tasks
 }
