@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"../slackutil"
 	"../wunderlistutil"
 )
 
@@ -30,19 +29,6 @@ func main() {
 	var lists []wunderlistutil.List
 	lists = wunderlistutil.GetLists(param)
 
-	var listID string
-	for _, list := range lists {
-		if list.Title == "job" {
-			listID = strconv.Itoa(list.ID)
-		}
-	}
-
-	var tasks []wunderlistutil.Task
-	tasks = wunderlistutil.GetTasks(param, listID, false)
-
-	//sort by title=
-	sort.Sort(ByTitle(tasks))
-
 	//for date
 	now := time.Now()
 	layout := "2006-01-02"
@@ -52,21 +38,38 @@ func main() {
 		fmt.Println("err! : ", err)
 	}
 	headMessage := "Today's your task...\n"
-	newTaskMessage := "\t[New Task]\n"
-	delayedTaskMessage := "\t[Delayed Task]\n"
+	newTaskMessage := "\t\t[New]"
+	delayedTaskMessage := "\t\t[Delay]"
 	var dueDate time.Time
 	var dueDateString string
 
-	//make message string
-	for _, task := range tasks {
-		dueDate, err = time.Parse(layout, task.DueDate)
-		dueDateString = dueDate.Format(layout)
-		if dueDate.Equal(today) {
-			newTaskMessage += "\t" + task.Title + "\n"
-		} else if dueDate.Before(today) && (dueDateString != RESETED_DUE_DATE) {
-			delayedTaskMessage += "\t" + task.Title + "(" + dueDateString + ")\n"
+	for _, list := range lists {
+
+		var tasks []wunderlistutil.Task
+		tasks = wunderlistutil.GetTasks(param, strconv.Itoa(list.ID), false)
+		//sort by title=
+		sort.Sort(ByTitle(tasks))
+		taskString := "\t[" + list.Title + "]\n"
+		applicableCount := 0
+		//make message string
+		for _, task := range tasks {
+			dueDate, err = time.Parse(layout, task.DueDate)
+			dueDateString = dueDate.Format(layout)
+			if dueDate.Equal(today) {
+				taskString += newTaskMessage + task.Title + "\n"
+				applicableCount++
+			} else if dueDate.Before(today) && (dueDateString != RESETED_DUE_DATE) {
+				taskString += delayedTaskMessage + task.Title + "(" + dueDateString + ")\n"
+				applicableCount++
+			}
+		}
+		if applicableCount == 0 {
+			continue
+		} else {
+			headMessage += taskString
 		}
 	}
 
-	slackutil.SendMessage(headMessage + newTaskMessage + delayedTaskMessage)
+	fmt.Println(headMessage)
+	//	slackutil.sendmessage(headmessage + newtaskmessage + delayedtaskmessage)
 }
