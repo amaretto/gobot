@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"../slackutil"
+
 	"../wunderlistutil"
 )
 
@@ -70,6 +72,5 @@ func main() {
 		}
 	}
 
-	fmt.Println(headMessage)
-	//	slackutil.sendmessage(headmessage + newtaskmessage + delayedtaskmessage)
+	slackutil.SendMessage(headMessage)
 }
