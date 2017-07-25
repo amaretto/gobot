@@ -19,6 +19,12 @@ func (a ByTitle) Len() int           { return len(a) }
 func (a ByTitle) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByTitle) Less(i, j int) bool { return a[i].Title < a[j].Title }
 
+// Messages
+const beginMessage = "\n今日の実施タスクは...\n"
+const noTaskMesssage = "一体一日何をしていたのですか？"
+const fewTaskMessage = "タスク消化量が少なめです。もっと頑張ってください"
+const manyTaskMessage = "素晴らしいタスクの消化量です！明日もこの調子でいきましょう"
+
 func main() {
 
 	param := wunderlistutil.Param{AccessToken: os.Getenv("WUND_ACTOKEN"),
@@ -32,7 +38,7 @@ func main() {
 	//for date
 	now := time.Now()
 	today := now.Format("2006-01-02")
-	message := "Today's done task...\n"
+	message := beginMessage
 	count := 0
 
 	for _, list := range lists {
@@ -56,11 +62,11 @@ func main() {
 	}
 
 	if count == 0 {
-		message += "... nothing!\nAre you seriously...?"
+		message += noTaskMesssage
 	} else if count < 5 {
-		message += "Done tasks are few... Do it properly"
+		message += fewTaskMessage
 	} else {
-		message += "Good job!! You done a lot of tasks!!"
+		message += manyTaskMessage
 	}
 
 	slackutil.SendMessage(message)
